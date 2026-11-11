@@ -3,23 +3,39 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Sistema de Tickets PCP — Portas Frigoríficas</title>
+  <title>PortaFlow — Gestão PCP de Portas Frigoríficas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header>
-    <div>
-      <h1>Sistema de Tickets PCP — Portas Frigoríficas</h1>
-      <p>Projeto acadêmico · dados fictícios · regras de negócio RN01–RN20</p>
+  <div id="login">
+    <div class="lb">
+      <div class="brand"><div class="logo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 8l-9-5-9 5v8l9 5 9-5zM3 8l9 5 9-5M12 13v8"/></svg></div><div><b>PortaFlow</b><small>GESTÃO PCP</small></div></div>
+      <h2>Cada pedido, um ticket.<br>Cada setor, uma responsabilidade.</h2>
+      <p>Priorização, sequenciamento da prensa de PU e comunicação entre setores em um só lugar.</p>
     </div>
-    <div class="usr">
-      <label>Usuário <select id="usr"></select></label>
-      <button class="b" id="bell"></button>
-      <button class="b" onclick="reset()">Restaurar dados</button>
+    <form class="lf" id="lf">
+      <h1>Entrar</h1>
+      <p class="mu">Acesso de demonstração. Escolha um perfil para ver as permissões de cada setor.</p>
+      <label>Usuário<select id="lu"></select></label>
+      <label>Senha<input id="lp" type="password" value="demo123" autocomplete="off"></label>
+      <div class="le" id="le"></div>
+      <button class="cta" type="submit">Entrar</button>
+      <p class="mu">Senha de exemplo: <b>demo123</b></p>
+    </form>
+  </div>
+  <div id="app">
+    <aside id="side"></aside>
+    <div class="mainw">
+      <div class="topbar">
+        <div class="srch"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 19a8 8 0 100-16 8 8 0 000 16zM21 21l-4.3-4.3"/></svg><input id="gs" placeholder="Buscar pedido, cliente ou tipo…"></div>
+        <div class="tr"><button class="ib" id="bell"></button>
+          <div class="avw"><button class="ib" id="avb"></button><div id="menu"></div></div></div>
+      </div>
+      <main id="m"></main>
     </div>
-  </header>
-  <nav id="nav"></nav>
-  <main id="m"></main>
+  </div>
   <div class="ov" id="ov"><div class="mod" id="mod"></div></div>
   <div class="tt" id="tt"></div>
   <script src="app.js"></script>

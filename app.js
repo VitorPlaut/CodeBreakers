@@ -41,10 +41,12 @@ function seed(){
 function init(){
   try{S=JSON.parse(localStorage.getItem("tk27"))}catch(e){}
   if(!S){const t=seed();S={t,n:[],u:1};sugerir();const x=t[3];S.n.push({k:"seed4",id:x.id,m:"Bloqueio: divergência de dimensão do vão (3500 × 3350 mm).",d:new Date().toISOString(),r:false});sv()}
-  $("#usr").innerHTML=USERS.map((u,i)=>`<option value="${i}">${u.n} — ${u.s}</option>`).join("");
-  $("#usr").value=S.u;$("#usr").onchange=e=>{S.u=+e.target.value;sv();fechar();render()};
-  $("#bell").onclick=()=>{tab="notif";render()};
   $("#ov").addEventListener("click",e=>{if(e.target.id==="ov")fechar()});
+  $("#bell").onclick=()=>{tab="notif";render()};
+  $("#avb").onclick=e=>{e.stopPropagation();$("#menu").classList.toggle("on")};
+  document.addEventListener("click",()=>$("#menu").classList.remove("on"));
+  $("#gs").addEventListener("input",e=>buscar(e.target.value));
+  $("#lf").onsubmit=e=>{e.preventDefault();entrar()};
   render();
 }
 function reset(){if(confirm("Restaurar os dados de exemplo? Suas alterações serão perdidas.")){try{localStorage.removeItem("tk27")}catch(e){}location.reload()}}
@@ -65,27 +67,49 @@ function riscos(){let c=0;T().filter(t=>late(t)||near(t)).forEach(t=>{const k=t.
 
 /* ---------- telas ---------- */
 const tabs={painel:"Visão geral",kanban:"Quadro Kanban",lista:"Todos os tickets",seq:"Sequência da prensa",notif:"Notificações",rn:"Regras de negócio"};
-function render(){riscos();const un=S.n.filter(n=>!n.r).length;
-  $("#nav").innerHTML=Object.entries(tabs).map(([k,v])=>`<button class="${k==tab?"on":""}" onclick="tab='${k}';render()">${v}${k==="notif"&&un?" ("+un+")":""}</button>`).join("");
-  $("#bell").textContent="Notificações: "+un;
-  $("#m").innerHTML={painel,kanban,lista,seq,notif,rn}[tab]()}
-function painel(){const a=T().filter(t=>!done(t)),f=fila(),r=calc(f),n=(fn)=>T().filter(fn).length;
-  const k=[["Abertos",a.length],["Em produção",n(t=>t.st==="Em produção")],["Atrasados",n(late)],["Vencem em 7 dias",n(near)],["Bloqueados",n(t=>t.st==="Bloqueado")],["Concluídos",n(done)],["Retrabalhos",T().reduce((s,t)=>s+t.ret,0)]];
-  const al=T().filter(t=>t.st==="Bloqueado"||late(t)||near(t));
-  return (al.length?`<div class="alert"><b>Atenção</b>${al.map(t=>`<div onclick="open_('${t.id}')">${t.id} — ${t.st==="Bloqueado"?"bloqueado: "+t.obs:late(t)?"atrasado":"vence em "+dl(t)+" dia(s)"}</div>`).join("")}</div>`:"")
-  +`<div class="kpis">${k.map(x=>`<div class="k"><b>${x[1]}</b><span>${x[0]}</span></div>`).join("")}</div>
-  <div class="box"><h3>Ocupação da prensa de PU</h3><div class="bar ${r.pct>100?"over":""}"><i style="width:${Math.min(100,r.pct)}%"></i></div><p class="mu">${r.h.toFixed(1)} h de ${CAP} h (hipótese) — ${r.pct}%. Setup previsto: ${r.su.toFixed(1)} h.</p></div>
-  <div class="box"><h3>Pendências por responsável</h3><div class="wrap"><table><tr><th>Responsável</th><th>Pedido</th><th>Próxima atividade</th><th>Prazo</th></tr>${a.map(t=>`<tr class="cl" onclick="open_('${t.id}')"><td>${t.resp} (${t.set})</td><td>${t.id}</td><td>${PX[t.et]}</td><td>${br(t.prazo)}</td></tr>`).join("")}</table></div></div>`}
+const IC={home:"M3 11l9-8 9 8M5 10v10h14V10",kan:"M4 4h6v16H4zM14 4h6v9h-6z",list:"M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01",clock:"M12 7v5l3 2M21 12a9 9 0 11-18 0 9 9 0 0118 0",bell:"M6 8a6 6 0 1112 0c0 7 3 9 3 9H3s3-2 3-9M10 21h4",book:"M4 19V5a2 2 0 012-2h13v16H6a2 2 0 00-2 2M4 19a2 2 0 002 2h13",plus:"M12 5v14M5 12h14",alert:"M12 9v4M12 17h.01M10.3 3.9L2 18a2 2 0 001.7 3h16.6a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z",check:"M20 6L9 17l-5-5",out:"M9 21H5V3h4M16 17l5-5-5-5M21 12H9",doc:"M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8zM14 3v5h5",box:"M21 8l-9-5-9 5v8l9 5 9-5zM3 8l9 5 9-5M12 13v8"};
+const ic=(n,s=18)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="${IC[n]}"/></svg>`;
+const ini=n=>n.slice(0,2).toUpperCase();
+const NAV=[["painel","home"],["kanban","kan"],["lista","list"],["seq","clock"],["notif","bell"],["rn","book"]];
+const SUB={painel:"Acompanhe pedidos, prazos e pendências de toda a produção.",kanban:"Arraste os cards entre os status (respeitando as regras) ou clique para abrir o ticket.",lista:"Todos os pedidos de fabricação, um ticket por pedido.",seq:"Ordem de injeção da prensa de PU, o principal gargalo.",notif:"Avisos para o PCP: bloqueios, riscos de atraso e mudanças.",rn:"As 20 regras de negócio e como o sistema as aplica."};
+function render(){
+  $("#login").style.display=S.in?"none":"flex";$("#app").style.display=S.in?"flex":"none";
+  if(!S.in){$("#lu").innerHTML=USERS.map((u,i)=>`<option value="${i}" ${i===S.u?"selected":""}>${u.n} — ${u.s}</option>`).join("");return}
+  riscos();const un=S.n.filter(n=>!n.r).length,u=me();
+  const bd={lista:T().filter(t=>!done(t)).length,notif:un,seq:fila().length,kanban:T().filter(t=>t.st==="Bloqueado").length};
+  $("#side").innerHTML=`<div class="brand"><div class="logo">${ic("box",20)}</div><div><b>PortaFlow</b><small>GESTÃO PCP</small></div></div><div class="env"><span>AMBIENTE</span><b>Frigoporta Indústria (fict.)</b></div><div class="grp">OPERAÇÃO</div>${NAV.map(([k,i])=>`<button class="ni ${k===tab?"on":""}" onclick="tab='${k}';render()">${ic(i)}<span>${tabs[k]}</span>${bd[k]?`<em>${bd[k]}</em>`:""}</button>`).join("")}<div class="sp"></div><div class="me" onclick="logout()"><div class="av">${ini(u.n)}</div><div><b>${u.n}</b><small>${u.s}</small></div>${ic("out",16)}</div>`;
+  $("#bell").innerHTML=ic("bell",18)+(un?`<i>${un}</i>`:"");
+  $("#avb").innerHTML=`<span class="av">${ini(u.n)}</span>`;
+  $("#menu").innerHTML=`<small style="padding:6px 8px">Trocar usuário (demonstração)</small>`+USERS.map((x,i)=>`<button onclick="trocar(${i})" class="${i===S.u?"on":""}">${x.n} · ${x.s}</button>`).join("")+`<hr><button onclick="reset()">Restaurar dados de exemplo</button><button onclick="logout()">Sair</button>`;
+  const d=new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"}).toUpperCase();
+  $("#m").innerHTML=`<div class="ph"><div><small class="dt">${d}</small><h1>${tabs[tab]}</h1><p>${SUB[tab]}</p></div><button class="cta" onclick="novo()">${ic("plus",16)} Novo ticket</button></div>`+{painel,kanban,lista,seq,notif,rn}[tab]()}
+function entrar(){if($("#lp").value!=="demo123"){$("#le").textContent="Senha incorreta. Use a senha de exemplo: demo123";return}S.u=+$("#lu").value;S.in=true;$("#le").textContent="";tab="painel";sv();render()}
+function logout(){S.in=false;sv();fechar();render()}
+function trocar(i){S.u=i;sv();fechar();render()}
+function buscar(v){if(tab!=="lista"){tab="lista";render()}filtrar(v)}
+function pill(t,x){const c={"Bloqueado":"r","Concluído":"g","Em produção":"g","Aguardando material":"y","Aguardando engenharia":"y","Aguardando produção":"y","Aguardando qualidade":"p"}[t.st]||"b";return `<span class="pl ${c}">${x||t.st}</span>`}
+function pz(t){if(done(t))return br(t.prazo);const d=dl(t);return d<0?`<b class="red">Atrasado ${-d}d</b>`:d===0?`<b class="red">Hoje</b>`:d<=7?`<b class="red">Em ${d} dias</b>`:br(t.prazo).slice(0,5)}
+const kc=(i,c,l,v,s)=>`<div class="kc"><div class="ki ${c}">${ic(i,20)}</div><div><small>${l}</small><b>${v}</b><em>${s}</em></div></div>`;
+function painel(){const a=T().filter(t=>!done(t)),f=fila(),r=calc(f),n=fn=>T().filter(fn).length;
+  const al=T().filter(t=>t.st==="Bloqueado"||late(t)||near(t)),by=(x,y)=>x.prazo.localeCompare(y.prazo);
+  const dest=a.slice().sort((x,y)=>RK[x.prio]-RK[y.prio]||by(x,y))[0];
+  const rows=a.slice().sort(by).slice(0,6).map(t=>`<tr class="cl" onclick="open_('${t.id}')"><td><b>${t.id}</b><small>${t.tipo}</small></td><td>${pill(t,ET[t.et])}</td><td><span class="av s">${ini(t.resp)}</span>${t.resp}</td><td>${pz(t)}</td></tr>`).join("");
+  const at=al.slice(0,5).map(t=>{const b=t.st==="Bloqueado";return `<div class="ai" onclick="open_('${t.id}')"><div class="ki ${b?"r":"y"}">${ic(b?"alert":"clock",16)}</div><div><b>${b?"Bloqueado: "+t.obs:late(t)?"Pedido atrasado":"Prazo próximo"}</b><small>${t.id} · ${t.cli}</small><small>${b?"Setor "+t.set:"Vence em "+br(t.prazo)}</small></div></div>`}).join("")||`<p class="mu pad">Nenhuma pendência no momento.</p>`;
+  const st=dest?ET.map((e,i)=>`<div class="sp1 ${i<dest.et?"d":i===dest.et?"c":""}"><div class="dot">${i<dest.et?ic("check",14):i+1}</div><b>${e}</b><small>${SE[i]}</small></div>`).join(""):"";
+  return `<div class="kg">${kc("doc","b","Pedidos abertos",a.length,n(done)+" concluídos")}${kc("box","g","Em produção",n(t=>t.st==="Em produção"),n(near)+" vencem em 7 dias")}${kc("alert","r","Bloqueados",n(t=>t.st==="Bloqueado"),n(late)+" atrasados")}${kc("clock","y","Prensa de PU",r.pct+"%",r.h.toFixed(1)+" h de "+CAP+" h · setup "+r.su.toFixed(1)+" h")}</div>
+  <div class="r2"><div class="cd"><div class="ch"><div><b>Pedidos em andamento</b><small>Ordenados pelo prazo de entrega</small></div><a href="#" onclick="tab='lista';render();return false">Ver todos ›</a></div><div class="wrap"><table><tr><th>Pedido</th><th>Etapa atual</th><th>Responsável</th><th>Prazo</th></tr>${rows}</table></div></div>
+  <div class="cd"><div class="ch"><div><b>Requer atenção</b><small>Pendências que bloqueiam o fluxo</small></div><span class="cnt">${al.length}</span></div>${at}</div></div>
+  ${dest?`<div class="cd"><div class="ch"><div><b>Fluxo do pedido em destaque</b><small>${dest.id} · ${dest.cli} · ${dest.tipo}</small></div><button class="b" onclick="open_('${dest.id}')">Abrir ticket</button></div><div class="stp">${st}</div></div>`:""}`}
 function dprazo(t){return late(t)?tg("red","Atrasado"):near(t)?tg("red","Vence em "+dl(t)+"d"):tg("","Prazo "+br(t.prazo))}
 function card(t){return `<div class="card ${t.prio}" draggable="true" ondragstart="event.dataTransfer.setData('t','${t.id}')" onclick="open_('${t.id}')"><b>${t.id}</b>${t.tipo}<br><small>${t.cli}</small><div class="pg"><i style="width:${Math.round((t.et+1)/12*100)}%"></i></div>${tg(t.prio,t.prio)}${dprazo(t)}</div>`}
-function kanban(){return `<p class="hint">Arraste os cards para mudar o status (respeitando as regras) ou clique para abrir o ticket. A barra mostra o avanço nas 12 etapas.</p><div class="kan">${ST.map(s=>{const l=T().filter(t=>t.st===s);return `<div class="col" ondragover="event.preventDefault()" ondrop="soltar(event,'${s}')"><h4>${s}<span>${l.length}</span></h4>${l.map(card).join("")}</div>`}).join("")}</div>`}
+function kanban(){return `<div class="kan">${ST.map(s=>{const l=T().filter(t=>t.st===s);return `<div class="col" ondragover="event.preventDefault()" ondrop="soltar(event,'${s}')"><h4>${s}<span>${l.length}</span></h4>${l.map(card).join("")}</div>`}).join("")}</div>`}
 function soltar(e,s){const t=find(e.dataTransfer.getData("t"));if(!t||t.st===s)return;
   if(s==="Bloqueado")return open_(t.id),toast("Informe o motivo do bloqueio (RN12).");
   if(s==="Concluído")return toast("RN19: só conclui após inspeção aprovada e expedição. Use o ticket.");
   if(!(isP()||me().s===t.set))return toast("RN10: só o setor responsável ("+t.set+") ou o PCP altera o status.");
   if(["Aguardando produção","Em produção","Aguardando qualidade"].includes(s)&&!(t.ap&&t.mat))return toast("RN08: falta aprovação técnica e/ou confirmação de materiais.");
   log(t,"Status alterado de "+t.st+" para "+s+".");t.st=s;sv();render()}
-function lista(){return `<div class="row" style="margin:0 0 10px"><input id="q" placeholder="Buscar por pedido, cliente, tipo ou status" oninput="filtrar(this.value)"><button class="b p" onclick="novo()">+ Novo ticket</button></div><div class="wrap"><table><tr><th>Pedido</th><th>Cliente</th><th>Tipo</th><th>Etapa</th><th>Responsável</th><th>Prioridade</th><th>Prazo</th><th>Status</th></tr>${T().map(t=>`<tr class="cl" onclick="open_('${t.id}')"><td>${t.id}</td><td>${t.cli}</td><td>${t.tipo}</td><td>${t.et+1}. ${ET[t.et]}</td><td>${t.resp} (${t.set})</td><td>${tg(t.prio,t.prio)}</td><td>${br(t.prazo)}</td><td>${t.st}</td></tr>`).join("")}</table></div>`}
+function lista(){return `<div class="cd wrap"><table><tr><th>Pedido</th><th>Cliente</th><th>Etapa atual</th><th>Responsável</th><th>Prioridade</th><th>Prazo</th><th>Status</th></tr>${T().map(t=>`<tr class="cl" onclick="open_('${t.id}')"><td><b>${t.id}</b><small>${t.tipo}</small></td><td>${t.cli}</td><td>${t.et+1}. ${ET[t.et]}</td><td><span class="av s">${ini(t.resp)}</span>${t.resp}</td><td>${tg(t.prio,t.prio)}</td><td>${pz(t)}</td><td>${pill(t)}</td></tr>`).join("")}</table></div>`}
 function filtrar(v){v=v.toLowerCase();document.querySelectorAll("#m tr.cl").forEach(r=>r.style.display=r.textContent.toLowerCase().includes(v)?"":"none")}
 function seq(){const f=fila(),r=calc(f);
   return `<div class="box"><h3>Fila da prensa de PU</h3><p class="mu">Ordem: prioridade, criticidade do cliente e prazo; pedidos da mesma família de molde ficam juntos (setup de ${SETUP_MESMA_FAMILIA} h em vez do setup completo). Só o PCP altera a sequência.</p>
